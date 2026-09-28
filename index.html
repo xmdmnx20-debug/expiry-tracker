@@ -109,6 +109,9 @@ dialog::backdrop{background:rgba(8,20,15,.55)}
 .foot{display:flex;gap:.5rem;margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--line)}
 .mob{display:none}
 @media (max-width:720px){.mob{display:inline-block}}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.box{background:var(--head);border:1px solid var(--line);border-radius:6px;padding:.8rem 1rem;font-size:.88rem;color:var(--muted);margin-bottom:1rem}
+.box b{color:var(--ink)}
 .status{font-size:.8rem;color:var(--muted);margin-top:1rem;text-align:center}
 
 @media (max-width:720px){
@@ -153,7 +156,10 @@ dialog::backdrop{background:rgba(8,20,15,.55)}
 
   <div class="sec-head">
     <h2>سجل الوثائق</h2>
-    <button class="btn btn-primary" id="addBtn" type="button">إضافة وثيقة</button>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="alertBtn" type="button">تنبيهات البريد <span class="dot" id="alertDot" hidden></span></button>
+      <button class="btn btn-primary" id="addBtn" type="button">إضافة وثيقة</button>
+    </div>
   </div>
   <section class="panel">
     <div class="bar">
@@ -224,7 +230,42 @@ dialog::backdrop{background:rgba(8,20,15,.55)}
   </form>
 </dialog>
 
+<dialog id="aDlg">
+  <div class="dlg-h"><h2>تنبيهات البريد الإلكتروني</h2></div>
+  <div class="dlg">
+    <div id="aOff">
+      <div class="box">يصلك بريد تلقائي عندما يتبقى على انتهاء أي وثيقة <b>٩٠، ٦٠، ٣٠، ١٤، ٧، ٣، ويوم واحد</b>، وفي يوم الانتهاء، ثم تذكير أسبوعي بالوثائق المنتهية.</div>
+      <div class="row">
+        <label for="aEmail">البريد الإلكتروني <span class="req">*</span></label>
+        <input id="aEmail" type="email" dir="ltr" placeholder="name@example.com" autocomplete="email">
+      </div>
+      <div class="row" id="aCodeRow" hidden>
+        <label for="aCode">رمز التحقق المرسل إلى بريدك</label>
+        <input id="aCode" inputmode="numeric" maxlength="6" dir="ltr" placeholder="______">
+      </div>
+      <div class="hint" id="aMsg"></div>
+      <div class="foot">
+        <button type="button" class="btn btn-primary" id="aSend">إرسال رمز التحقق</button>
+        <button type="button" class="btn btn-primary" id="aVerify" hidden>تأكيد التفعيل</button>
+        <button type="button" class="btn btn-ghost" data-aclose>إغلاق</button>
+      </div>
+    </div>
+    <div id="aOn" hidden>
+      <div class="box">التنبيهات مفعّلة على: <b id="aOnEmail" dir="ltr"></b><br>تُرسل يومياً الساعة ٨ صباحاً عند وجود وثائق تستدعي المتابعة.</div>
+      <div class="hint" id="aMsg2"></div>
+      <div class="foot">
+        <button type="button" class="btn btn-primary" id="aTest">إرسال رسالة تجريبية</button>
+        <button type="button" class="btn btn-ghost" data-aclose>إغلاق</button>
+        <button type="button" class="btn btn-danger" id="aStop" style="margin-inline-start:auto">إيقاف التنبيهات</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <script>
+/* ضع هنا رابط Web app من Google Apps Script */
+const ALERT_API = "";
+
 (function(){
   const TYPES = ["إقامة","رخصة قيادة","استمارة سيارة","تأمين سيارة","فحص دوري","جواز سفر","هوية وطنية","سجل تجاري","رخصة بلدية","أخرى"];
   const HMONTHS = ["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"];
@@ -280,11 +321,13 @@ dialog::backdrop{background:rgba(8,20,15,.55)}
     render();
     if(col){ try{ await col.doc(it.id).set(it); }catch(e){ setStatus("تعذّر الحفظ في السحابة، تم الحفظ على هذا الجهاز"); lsSave(); } }
     else lsSave();
+    scheduleSync();
   }
   async function removeItem(id){
     items = items.filter(x=>x.id!==id); render();
     if(col){ try{ await col.doc(id).delete(); }catch(e){ setStatus("تعذّر الحذف من السحابة"); } }
     else lsSave();
+    scheduleSync();
   }
   function setStatus(t){ $("status").textContent=t; }
 
@@ -449,6 +492,80 @@ dialog::backdrop{background:rgba(8,20,15,.55)}
       setStatus(added? `تم استيراد ${added} عنصر` : "ما لقيت صفوف جديدة في الملف");
     }catch(err){ setStatus("تعذّر قراءة الملف — تأكد إنه بنفس ترتيب أعمدة الملف المحمّل"); }
   };
+
+  // ---------- email alerts ----------
+  const AL_KEY="expiry-alerts-v1";
+  function alGet(){ try{ return JSON.parse(localStorage.getItem(AL_KEY)||"null"); }catch(e){ return null; } }
+  function alSet(v){ try{ v? localStorage.setItem(AL_KEY,JSON.stringify(v)) : localStorage.removeItem(AL_KEY); }catch(e){} }
+  async function api(action, body){
+    if(!ALERT_API) throw new Error("لم يتم ربط خدمة التنبيهات بعد (ALERT_API فارغ)");
+    const r = await fetch(ALERT_API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...body})});
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||"تعذّر الاتصال بخدمة التنبيهات");
+    return j;
+  }
+  let syncT=null;
+  function scheduleSync(){ if(!alGet()) return; clearTimeout(syncT); syncT=setTimeout(syncNow,1500); }
+  async function syncNow(){
+    const a=alGet(); if(!a) return;
+    try{
+      await api("sync",{email:a.email,token:a.token,items:items.map(x=>({id:x.id,type:x.type,name:x.name,num:x.num,date:x.date,note:x.note}))});
+    }catch(e){
+      setStatus("تعذّر تحديث بيانات التنبيهات: "+e.message);
+      if(/انتهت صلاحية الربط/.test(e.message)){ alSet(null); alertUI(); }
+    }
+  }
+  function alertUI(){
+    const a=alGet();
+    $("alertDot").hidden=!a;
+    $("aOff").hidden=!!a; $("aOn").hidden=!a;
+    if(a) $("aOnEmail").textContent=a.email;
+  }
+  function msg(id,t,err){ const h=$(id); h.textContent=t; h.classList.toggle("err",!!err); }
+  function busy(b,on,label){ b.disabled=on; if(label) b.textContent=label; }
+  $("alertBtn").onclick=()=>{ alertUI(); msg("aMsg",""); msg("aMsg2",""); $("aDlg").showModal(); };
+  document.querySelectorAll("[data-aclose]").forEach(b=>b.onclick=()=>$("aDlg").close());
+  $("aSend").onclick=async()=>{
+    const email=$("aEmail").value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg("aMsg","اكتب بريداً إلكترونياً صحيحاً",1); return; }
+    busy($("aSend"),true,"جارٍ الإرسال…");
+    try{
+      await api("requestCode",{email});
+      $("aCodeRow").hidden=false; $("aVerify").hidden=false;
+      $("aSend").textContent="إعادة إرسال الرمز";
+      msg("aMsg","أرسلنا رمز التحقق إلى بريدك. تحقق من صندوق الوارد أو الرسائل غير المرغوبة.");
+      $("aCode").focus();
+    }catch(e){ msg("aMsg",e.message,1); $("aSend").textContent="إرسال رمز التحقق"; }
+    $("aSend").disabled=false;
+  };
+  $("aVerify").onclick=async()=>{
+    const email=$("aEmail").value.trim(), code=$("aCode").value.trim();
+    if(code.length!==6){ msg("aMsg","الرمز مكوّن من ٦ أرقام",1); return; }
+    busy($("aVerify"),true,"جارٍ التحقق…");
+    try{
+      const j=await api("verify",{email,code});
+      alSet({email:email.toLowerCase(),token:j.token});
+      await syncNow();
+      alertUI(); msg("aMsg2","تم تفعيل التنبيهات بنجاح.");
+    }catch(e){ msg("aMsg",e.message,1); }
+    busy($("aVerify"),false,"تأكيد التفعيل");
+  };
+  $("aTest").onclick=async()=>{
+    const a=alGet(); if(!a) return;
+    busy($("aTest"),true,"جارٍ الإرسال…");
+    try{ await syncNow(); await api("test",{email:a.email,token:a.token}); msg("aMsg2","أُرسلت رسالة تجريبية إلى "+a.email); }
+    catch(e){ msg("aMsg2",e.message,1); }
+    busy($("aTest"),false,"إرسال رسالة تجريبية");
+  };
+  $("aStop").onclick=async()=>{
+    const a=alGet(); if(!a) return;
+    if(!confirm("إيقاف التنبيهات وحذف نسخة بياناتك من خدمة التنبيهات؟")) return;
+    try{ await api("unsubscribe",{email:a.email,token:a.token}); }catch(e){}
+    alSet(null); alertUI(); $("aCodeRow").hidden=true; $("aVerify").hidden=true; $("aCode").value="";
+    $("aSend").textContent="إرسال رمز التحقق"; msg("aMsg","تم إيقاف التنبيهات.");
+  };
+  alertUI();
+  if(alGet()) syncNow();
 
   // ---------- boot ----------
   $("today").innerHTML = "التاريخ: " + fmtG.format(new Date(today0())) + "<br>" + fmtH.format(new Date(today0()));
