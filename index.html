@@ -9,25 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#F3F5F4; --panel:#FFFFFF; --ink:#1C2521; --muted:#5C6763; --line:#D9DFDC; --head:#F7F9F8;
-  --brand:#0B5D3B; --brand-dk:#084A2F; --brand-ink:#FFFFFF; --gold:#A8894C;
-  --ok:#1B7A4B; --ok-bg:#E4F2EA; --warn:#9A6100; --warn-bg:#FBF0DA;
-  --soon:#B3261E; --soon-bg:#FBE6E4; --dead:#6E1510; --dead-bg:#F1D3D0;
-  --field:#FFFFFF; color-scheme:light;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0F1513; --panel:#161E1B; --ink:#E6ECE9; --muted:#9AA6A1; --line:#2A3531; --head:#1B2521;
-    --brand:#2E8B62; --brand-dk:#0E3A28; --brand-ink:#FFFFFF; --gold:#C9A96A;
-    --ok:#5CC592; --ok-bg:#15302A; --warn:#E9B04F; --warn-bg:#33280F;
-    --soon:#F07A71; --soon-bg:#3A1C1A; --dead:#FFA69E; --dead-bg:#461613; --field:#121916; color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0F1513; --panel:#161E1B; --ink:#E6ECE9; --muted:#9AA6A1; --line:#2A3531; --head:#1B2521;
-  --brand:#2E8B62; --brand-dk:#0E3A28; --brand-ink:#FFFFFF; --gold:#C9A96A;
-  --ok:#5CC592; --ok-bg:#15302A; --warn:#E9B04F; --warn-bg:#33280F;
-  --soon:#F07A71; --soon-bg:#3A1C1A; --dead:#FFA69E; --dead-bg:#461613; --field:#121916; color-scheme:dark;
+  --bg:#1B2027; --panel:#232A32; --ink:#E8ECEF; --muted:#8C98A4; --line:#2F3842; --head:#1F252C;
+  --brand:#3FC1A0; --brand-dk:#14181D; --brand-ink:#0B1512; --gold:#3FC1A0;
+  --ok:#3FC1A0; --ok-bg:#163A31; --warn:#F0B04F; --warn-bg:#3B2F16;
+  --soon:#F07A71; --soon-bg:#402424; --dead:#FFA69E; --dead-bg:#4D1B18;
+  --field:#1B2027; color-scheme:dark;
 }
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -35,13 +21,13 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.6}
 
 /* official header */
-.gov{background:var(--brand-dk);color:#fff;border-bottom:3px solid var(--gold)}
+.gov{background:var(--brand-dk);color:var(--ink);border-bottom:1px solid var(--line)}
 .gov-in{max-width:1080px;margin:0 auto;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
 .seal{width:46px;height:46px;flex:0 0 46px;border:1.5px solid var(--gold);border-radius:50%;display:grid;place-items:center}
 .seal svg{width:26px;height:26px}
 .gov h1{font-size:1.25rem;font-weight:700;margin:0;line-height:1.3}
-.gov .sub{font-size:.85rem;opacity:.8}
-.gov .date{margin-inline-start:auto;text-align:end;font-size:.85rem;line-height:1.5;opacity:.9}
+.gov .sub{font-size:.85rem;color:var(--muted)}
+.gov .date{margin-inline-start:auto;text-align:end;font-size:.85rem;line-height:1.5;color:var(--muted)}
 
 .wrap{max-width:1080px;margin:0 auto;padding:1.5rem 1.25rem 4rem}
 .sec-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin:0 0 .9rem}
@@ -57,12 +43,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans A
 
 /* stats */
 .strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem}
-.strip button{font:inherit;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:6px;padding:.85rem 1rem;text-align:start;cursor:pointer;color:var(--ink)}
-.strip button[aria-pressed="true"]{background:var(--cbg);border-color:var(--c)}
+.strip button{font:inherit;background:var(--panel);border:0;border-inline-start:3px solid var(--c);border-radius:6px 0 0 6px;padding:.85rem 1rem;text-align:start;cursor:pointer;color:var(--ink)}
+.strip button[aria-pressed="true"]{background:var(--cbg)}
 .strip .l{display:block;font-size:.85rem;color:var(--muted)}
 .strip .n{display:block;font-size:1.7rem;font-weight:700;color:var(--ink);line-height:1.2;font-variant-numeric:tabular-nums}
 
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .bar{display:flex;gap:.6rem;padding:.8rem;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
 .bar input,.bar select{flex:1 1 200px;max-width:320px}
 .bar .spacer{flex:1}
@@ -92,8 +78,8 @@ tbody tr:hover{background:var(--head)}
 
 /* dialog */
 dialog{border:1px solid var(--line);border-radius:8px;padding:0;background:var(--panel);color:var(--ink);width:min(540px,94vw);box-shadow:0 18px 50px rgba(0,0,0,.3)}
-dialog::backdrop{background:rgba(8,20,15,.55)}
-.dlg-h{background:var(--brand-dk);color:#fff;padding:.9rem 1.25rem;border-bottom:3px solid var(--gold)}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+.dlg-h{background:var(--brand-dk);color:var(--ink);padding:.9rem 1.25rem;border-bottom:1px solid var(--line)}
 .dlg-h h2{margin:0;font-size:1.05rem;font-weight:600}
 .dlg{padding:1.25rem}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 .8rem}
@@ -136,7 +122,7 @@ dialog::backdrop{background:rgba(8,20,15,.55)}
 <body>
 <header class="gov">
   <div class="gov-in">
-    <div class="seal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C9A96A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4"/></svg></div>
+    <div class="seal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#3FC1A0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4"/></svg></div>
     <div>
       <h1>نظام متابعة صلاحية الوثائق</h1>
       <div class="sub">الإقامات، الرخص، الاستمارات، والوثائق الرسمية</div>
