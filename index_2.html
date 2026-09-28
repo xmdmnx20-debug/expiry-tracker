@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نظام متابعة صلاحية الوثائق</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F4; --panel:#FFFFFF; --ink:#1C2521; --muted:#5C6763; --line:#D9DFDC; --head:#F7F9F8;
+  --brand:#0B5D3B; --brand-dk:#084A2F; --brand-ink:#FFFFFF; --gold:#A8894C;
+  --ok:#1B7A4B; --ok-bg:#E4F2EA; --warn:#9A6100; --warn-bg:#FBF0DA;
+  --soon:#B3261E; --soon-bg:#FBE6E4; --dead:#6E1510; --dead-bg:#F1D3D0;
+  --field:#FFFFFF; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1513; --panel:#161E1B; --ink:#E6ECE9; --muted:#9AA6A1; --line:#2A3531; --head:#1B2521;
+    --brand:#2E8B62; --brand-dk:#0E3A28; --brand-ink:#FFFFFF; --gold:#C9A96A;
+    --ok:#5CC592; --ok-bg:#15302A; --warn:#E9B04F; --warn-bg:#33280F;
+    --soon:#F07A71; --soon-bg:#3A1C1A; --dead:#FFA69E; --dead-bg:#461613; --field:#121916; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1513; --panel:#161E1B; --ink:#E6ECE9; --muted:#9AA6A1; --line:#2A3531; --head:#1B2521;
+  --brand:#2E8B62; --brand-dk:#0E3A28; --brand-ink:#FFFFFF; --gold:#C9A96A;
+  --ok:#5CC592; --ok-bg:#15302A; --warn:#E9B04F; --warn-bg:#33280F;
+  --soon:#F07A71; --soon-bg:#3A1C1A; --dead:#FFA69E; --dead-bg:#461613; --field:#121916; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.6}
+
+/* official header */
+.gov{background:var(--brand-dk);color:#fff;border-bottom:3px solid var(--gold)}
+.gov-in{max-width:1080px;margin:0 auto;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.seal{width:46px;height:46px;flex:0 0 46px;border:1.5px solid var(--gold);border-radius:50%;display:grid;place-items:center}
+.seal svg{width:26px;height:26px}
+.gov h1{font-size:1.25rem;font-weight:700;margin:0;line-height:1.3}
+.gov .sub{font-size:.85rem;opacity:.8}
+.gov .date{margin-inline-start:auto;text-align:end;font-size:.85rem;line-height:1.5;opacity:.9}
+
+.wrap{max-width:1080px;margin:0 auto;padding:1.5rem 1.25rem 4rem}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin:0 0 .9rem}
+.sec-head h2{font-size:1.05rem;font-weight:600;margin:0;padding-inline-start:.7rem;border-inline-start:4px solid var(--brand)}
+
+.btn{font:inherit;border-radius:6px;padding:.55rem 1.1rem;cursor:pointer;font-weight:500;border:1px solid transparent;display:inline-flex;align-items:center;gap:.4rem;line-height:1.4}
+.btn-primary{background:var(--brand);color:var(--brand-ink)}
+.btn-primary:hover{filter:brightness(.93)}
+.btn-ghost{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.btn-ghost:hover{border-color:var(--muted)}
+.btn-danger{background:transparent;color:var(--soon);border-color:var(--line)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,button:focus-visible,label:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* stats */
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem}
+.strip button{font:inherit;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:6px;padding:.85rem 1rem;text-align:start;cursor:pointer;color:var(--ink)}
+.strip button[aria-pressed="true"]{background:var(--cbg);border-color:var(--c)}
+.strip .l{display:block;font-size:.85rem;color:var(--muted)}
+.strip .n{display:block;font-size:1.7rem;font-weight:700;color:var(--ink);line-height:1.2;font-variant-numeric:tabular-nums}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.bar{display:flex;gap:.6rem;padding:.8rem;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.bar input,.bar select{flex:1 1 200px;max-width:320px}
+.bar .spacer{flex:1}
+input,select{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:.5rem .7rem;width:100%}
+
+/* table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{background:var(--head);color:var(--muted);font-weight:600;text-align:start;padding:.65rem .8rem;border-bottom:1px solid var(--line);white-space:nowrap;font-size:.85rem}
+td{padding:.7rem .8rem;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--head)}
+.nm{font-weight:600}
+.sm{color:var(--muted);font-size:.82rem}
+.days{font-weight:700;font-variant-numeric:tabular-nums;color:var(--c);white-space:nowrap}
+.badge{display:inline-block;padding:.12rem .6rem;border-radius:4px;font-size:.8rem;font-weight:600;background:var(--cbg);color:var(--c);white-space:nowrap}
+.link{font:inherit;background:none;border:0;color:var(--brand);cursor:pointer;padding:.2rem .3rem;font-weight:500}
+.link:hover{text-decoration:underline}
+.empty{text-align:center;padding:3rem 1rem;color:var(--muted)}
+.empty strong{color:var(--ink);display:block;margin-bottom:.3rem}
+.empty p{margin:0 0 1rem}
+
+.s-ok{--c:var(--ok);--cbg:var(--ok-bg)} .s-warn{--c:var(--warn);--cbg:var(--warn-bg)}
+.s-soon{--c:var(--soon);--cbg:var(--soon-bg)} .s-dead{--c:var(--dead);--cbg:var(--dead-bg)}
+.legend{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);padding:.7rem .9rem;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-inline-end:.35rem;vertical-align:-1px}
+
+/* dialog */
+dialog{border:1px solid var(--line);border-radius:8px;padding:0;background:var(--panel);color:var(--ink);width:min(540px,94vw);box-shadow:0 18px 50px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(8,20,15,.55)}
+.dlg-h{background:var(--brand-dk);color:#fff;padding:.9rem 1.25rem;border-bottom:3px solid var(--gold)}
+.dlg-h h2{margin:0;font-size:1.05rem;font-weight:600}
+.dlg{padding:1.25rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 .8rem}
+.row{margin-bottom:.85rem}
+.row label{display:block;font-size:.85rem;font-weight:500;margin-bottom:.3rem}
+.req{color:var(--soon)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:.5rem}
+.seg button{font:inherit;background:var(--panel);border:0;padding:.3rem .9rem;cursor:pointer;color:var(--muted);font-size:.85rem}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+.hij{display:grid;grid-template-columns:1fr 1.4fr 1.2fr;gap:.4rem}
+.hint{font-size:.82rem;color:var(--muted);margin-top:.3rem;min-height:1.2em}
+.err{color:var(--soon)}
+.foot{display:flex;gap:.5rem;margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--line)}
+.mob{display:none}
+@media (max-width:720px){.mob{display:inline-block}}
+.status{font-size:.8rem;color:var(--muted);margin-top:1rem;text-align:center}
+
+@media (max-width:720px){
+  .strip{grid-template-columns:repeat(2,1fr)}
+  .gov .date{margin-inline-start:0;text-align:start;width:100%}
+  .grid2{grid-template-columns:1fr}
+  .bar input,.bar select{max-width:none}
+  table,thead,tbody,tr,td{display:block}
+  thead{display:none}
+  tr{padding:.75rem .9rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:.15rem .8rem}
+  tr:last-child{border-bottom:0}
+  td{padding:0;border:0}
+  td[data-c="name"]{grid-column:1}
+  td[data-c="days"]{grid-column:2;grid-row:1;text-align:end}
+  td[data-c="type"],td[data-c="date"],td[data-c="status"]{grid-column:1/3}
+  td[data-c="status"]{display:flex;justify-content:space-between;align-items:center;margin-top:.35rem}
+  td[data-c="act"]{display:none}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<header class="gov">
+  <div class="gov-in">
+    <div class="seal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C9A96A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4"/></svg></div>
+    <div>
+      <h1>نظام متابعة صلاحية الوثائق</h1>
+      <div class="sub">الإقامات، الرخص، الاستمارات، والوثائق الرسمية</div>
+    </div>
+    <div class="date" id="today"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="sec-head"><h2>ملخص الحالة</h2></div>
+  <div class="strip" id="strip">
+    <button data-f="dead" class="s-dead" aria-pressed="false"><span class="l">وثائق منتهية</span><span class="n" id="nDead">0</span></button>
+    <button data-f="soon" class="s-soon" aria-pressed="false"><span class="l">تنتهي خلال ٣٠ يوماً</span><span class="n" id="nSoon">0</span></button>
+    <button data-f="warn" class="s-warn" aria-pressed="false"><span class="l">تنتهي خلال ٩٠ يوماً</span><span class="n" id="nWarn">0</span></button>
+    <button data-f="ok" class="s-ok" aria-pressed="false"><span class="l">وثائق سارية</span><span class="n" id="nOk">0</span></button>
+  </div>
+
+  <div class="sec-head">
+    <h2>سجل الوثائق</h2>
+    <button class="btn btn-primary" id="addBtn" type="button">إضافة وثيقة</button>
+  </div>
+  <section class="panel">
+    <div class="bar">
+      <input id="q" type="search" placeholder="بحث بالاسم أو رقم الوثيقة" aria-label="بحث">
+      <select id="typeFilter" aria-label="نوع الوثيقة"><option value="">جميع الأنواع</option></select>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" id="xlOut" type="button">تصدير Excel</button>
+      <label class="btn btn-ghost" for="xlIn" tabindex="0" id="xlInLbl">استيراد Excel</label>
+      <input type="file" id="xlIn" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+    <div id="list"></div>
+    <div class="legend">
+      <span class="s-ok"><i></i>سارية (أكثر من ٩٠ يوماً)</span>
+      <span class="s-warn"><i></i>تنبيه (٩٠ يوماً أو أقل)</span>
+      <span class="s-soon"><i></i>عاجل (٣٠ يوماً أو أقل)</span>
+      <span class="s-dead"><i></i>منتهية</span>
+    </div>
+  </section>
+  <div class="status" id="status"></div>
+</main>
+
+<dialog id="dlg">
+  <div class="dlg-h"><h2 id="dlgTitle">إضافة وثيقة</h2></div>
+  <form class="dlg" id="form" method="dialog">
+    <div class="grid2">
+      <div class="row">
+        <label for="fType">نوع الوثيقة <span class="req">*</span></label>
+        <select id="fType"></select>
+      </div>
+      <div class="row" id="customRow" hidden>
+        <label for="fCustom">حدد النوع</label>
+        <input id="fCustom" placeholder="مثال: عقد إيجار">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="row">
+        <label for="fName">اسم صاحب الوثيقة <span class="req">*</span></label>
+        <input id="fName" required placeholder="اسم العامل أو المركبة">
+      </div>
+      <div class="row">
+        <label for="fNum">رقم الوثيقة</label>
+        <input id="fNum" inputmode="numeric" placeholder="اختياري">
+      </div>
+    </div>
+    <div class="row">
+      <label>تاريخ الانتهاء <span class="req">*</span></label>
+      <div class="seg" role="group" aria-label="نوع التقويم">
+        <button type="button" data-cal="g" aria-pressed="true">ميلادي</button>
+        <button type="button" data-cal="h" aria-pressed="false">هجري</button>
+      </div>
+      <div id="gWrap"><input id="fDate" type="date" aria-label="التاريخ الميلادي"></div>
+      <div id="hWrap" class="hij" hidden>
+        <input id="hD" type="number" min="1" max="30" placeholder="اليوم" aria-label="اليوم الهجري">
+        <select id="hM" aria-label="الشهر الهجري"></select>
+        <input id="hY" type="number" min="1400" max="1500" placeholder="السنة" aria-label="السنة الهجرية">
+      </div>
+      <div class="hint" id="dateHint"></div>
+    </div>
+    <div class="row">
+      <label for="fNote">ملاحظات</label>
+      <input id="fNote" placeholder="اختياري">
+    </div>
+    <div class="foot">
+      <button type="submit" class="btn btn-primary" id="saveBtn">حفظ</button>
+      <button type="button" class="btn btn-ghost" id="cancelBtn">إلغاء</button>
+      <button type="button" class="btn btn-danger" id="delBtn" hidden style="margin-inline-start:auto">حذف الوثيقة</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  const TYPES = ["إقامة","رخصة قيادة","استمارة سيارة","تأمين سيارة","فحص دوري","جواز سفر","هوية وطنية","سجل تجاري","رخصة بلدية","أخرى"];
+  const HMONTHS = ["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"];
+  const LS_KEY = "expiry-items-v1";
+  const $ = id => document.getElementById(id);
+
+  let items = [];          // {id,type,name,num,date:'YYYY-MM-DD',note,created}
+  let db = null, col = null;
+  let filterStatus = "", editingId = null, cal = "g";
+
+  // ---------- dates ----------
+  const DAY = 86400000;
+  function today0(){ const d=new Date(); return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()); }
+  function parseISO(s){ const [y,m,d]=s.split("-").map(Number); return Date.UTC(y,m-1,d); }
+  function daysLeft(s){ return Math.round((parseISO(s)-today0())/DAY); }
+  const fmtG = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn",{year:"numeric",month:"long",day:"numeric",timeZone:"UTC"});
+  const fmtH = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn",{year:"numeric",month:"long",day:"numeric",timeZone:"UTC"});
+  const hParts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn",{year:"numeric",month:"numeric",day:"numeric",timeZone:"UTC"});
+  function hijriOf(ms){
+    const p={}; hParts.formatToParts(new Date(ms)).forEach(x=>{ if(x.type!=="literal") p[x.type]=parseInt(x.value,10); });
+    return {y:p.year,m:p.month,d:p.day};
+  }
+  function hijriToISO(y,m,d){
+    // estimate then scan
+    const est = Date.UTC(622,6,16) + ((y-1)*354.367 + (m-1)*29.53 + (d-1))*DAY;
+    for(let off=-40; off<=40; off++){
+      const t = est + off*DAY, h = hijriOf(t);
+      if(h.y===y && h.m===m && h.d===d){ const x=new Date(t); return x.toISOString().slice(0,10); }
+    }
+    return null;
+  }
+  function status(n){ return n<0?"dead": n<=30?"soon": n<=90?"warn":"ok"; }
+  function countLabel(n){
+    if(n<0) return {num:Math.abs(n), txt: Math.abs(n)===1?"يوم مضى":"يوم مضى"};
+    if(n===0) return {num:"اليوم", txt:"ينتهي"};
+    return {num:n, txt:"يوم باقي"};
+  }
+  function humanLeft(n){
+    const a=Math.abs(n); if(a<45) return null;
+    const mo=Math.floor(a/30.44), y=Math.floor(mo/12), r=mo%12;
+    let s = y? (y+" سنة"+(r?" و"+r+" شهر":"")) : (mo+" شهر");
+    return (n<0?"منتهي منذ ":"تقريباً ")+s;
+  }
+
+  // ---------- storage ----------
+  function lsLoad(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||"[]"); }catch(e){ return []; } }
+  function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(items)); }catch(e){} }
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  async function saveItem(it){
+    const i = items.findIndex(x=>x.id===it.id);
+    if(i>=0) items[i]=it; else items.push(it);
+    render();
+    if(col){ try{ await col.doc(it.id).set(it); }catch(e){ setStatus("تعذّر الحفظ في السحابة، تم الحفظ على هذا الجهاز"); lsSave(); } }
+    else lsSave();
+  }
+  async function removeItem(id){
+    items = items.filter(x=>x.id!==id); render();
+    if(col){ try{ await col.doc(id).delete(); }catch(e){ setStatus("تعذّر الحذف من السحابة"); } }
+    else lsSave();
+  }
+  function setStatus(t){ $("status").textContent=t; }
+
+  // ---------- render ----------
+  function esc(s){ const d=document.createElement("div"); d.textContent=s==null?"":String(s); return d.innerHTML; }
+  function render(){
+    const q = $("q").value.trim(), tf = $("typeFilter").value;
+    const all = items.map(it=>({...it, n:daysLeft(it.date)})).map(it=>({...it, st:status(it.n)}));
+    const c={dead:0,soon:0,warn:0,ok:0}; all.forEach(x=>c[x.st]++);
+    $("nDead").textContent=c.dead; $("nSoon").textContent=c.soon; $("nWarn").textContent=c.warn; $("nOk").textContent=c.ok;
+
+    // type filter options from data
+    const used = [...new Set(items.map(x=>x.type))];
+    const sel = $("typeFilter"), cur = sel.value;
+    sel.innerHTML = '<option value="">جميع الأنواع</option>' + used.map(t=>`<option${t===cur?" selected":""}>${esc(t)}</option>`).join("");
+
+    let list = all.filter(x => (!filterStatus || x.st===filterStatus) && (!tf || x.type===tf) &&
+      (!q || (x.name+" "+(x.num||"")+" "+(x.note||"")+" "+x.type).includes(q)));
+    list.sort((a,b)=>a.n-b.n);
+
+    const box=$("list");
+    if(!items.length){
+      box.innerHTML = `<div class="empty"><strong>لا توجد وثائق مسجلة</strong><p>أضف أول وثيقة لبدء متابعة تواريخ الانتهاء.</p><button class="btn btn-primary" data-add type="button">إضافة وثيقة</button></div>`;
+      box.querySelector("[data-add]").onclick=()=>openDlg();
+      return;
+    }
+    if(!list.length){ box.innerHTML = `<div class="empty">لا توجد نتائج مطابقة لمعايير البحث.</div>`; return; }
+    const STL={dead:"منتهية",soon:"عاجل",warn:"تنبيه",ok:"سارية"};
+    box.innerHTML = `<div class="tbl-wrap"><table><thead><tr>
+      <th>صاحب الوثيقة</th><th>نوع الوثيقة</th><th>تاريخ الانتهاء</th><th>المتبقي</th><th>الحالة</th><th><span class="sm" style="visibility:hidden">إجراء</span></th>
+    </tr></thead><tbody>` + list.map(x=>{
+      const ms=parseISO(x.date);
+      const days = x.n<0 ? `منتهية منذ ${Math.abs(x.n)} يوم` : x.n===0 ? "تنتهي اليوم" : `${x.n} يوم`;
+      return `<tr class="s-${x.st}">
+        <td data-c="name"><div class="nm">${esc(x.name)}</div>${x.num?`<div class="sm">رقم: ${esc(x.num)}</div>`:""}${x.note?`<div class="sm">${esc(x.note)}</div>`:""}</td>
+        <td data-c="type">${esc(x.type)}</td>
+        <td data-c="date"><div>${fmtG.format(new Date(ms))}</div><div class="sm">${fmtH.format(new Date(ms))}</div></td>
+        <td data-c="days"><span class="days">${days}</span></td>
+        <td data-c="status"><span class="badge">${STL[x.st]}</span><button class="link mob" data-edit="${x.id}" type="button">تعديل</button></td>
+        <td data-c="act"><button class="link" data-edit="${x.id}" type="button">تعديل</button></td>
+      </tr>`;
+    }).join("") + `</tbody></table></div>`;
+    box.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openDlg(b.dataset.edit));
+  }
+
+  // ---------- dialog ----------
+  $("fType").innerHTML = TYPES.map(t=>`<option>${t}</option>`).join("");
+  $("hM").innerHTML = HMONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
+  $("fType").onchange = ()=>{ $("customRow").hidden = $("fType").value!=="أخرى"; };
+
+  function setCal(c){
+    cal=c;
+    document.querySelectorAll("[data-cal]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.cal===c));
+    $("gWrap").hidden = c!=="g"; $("hWrap").hidden = c!=="h";
+    // sync values across
+    if(c==="h" && $("fDate").value){ const h=hijriOf(parseISO($("fDate").value)); $("hD").value=h.d; $("hM").value=h.m; $("hY").value=h.y; }
+    if(c==="g"){ const iso=readHijri(); if(iso) $("fDate").value=iso; }
+    updateHint();
+  }
+  document.querySelectorAll("[data-cal]").forEach(b=>b.onclick=()=>setCal(b.dataset.cal));
+
+  function readHijri(){
+    const d=+$("hD").value, m=+$("hM").value, y=+$("hY").value;
+    if(!d||!m||!y) return null; return hijriToISO(y,m,d);
+  }
+  function currentISO(){ return cal==="g" ? ($("fDate").value||null) : readHijri(); }
+  function updateHint(){
+    const h=$("dateHint"); h.classList.remove("err");
+    const iso=currentISO();
+    if(!iso){ h.textContent = (cal==="h" && $("hD").value && $("hY").value) ? "تاريخ هجري غير صحيح" : ""; if(h.textContent) h.classList.add("err"); return; }
+    const n=daysLeft(iso), ms=parseISO(iso);
+    const other = cal==="g"? fmtH.format(new Date(ms)) : fmtG.format(new Date(ms));
+    h.textContent = `${other} — ${n<0? "منتهي منذ "+Math.abs(n)+" يوم" : n===0? "ينتهي اليوم" : "باقي "+n+" يوم"}`;
+  }
+  ["fDate","hD","hM","hY"].forEach(id=>$(id).addEventListener("input",updateHint));
+  $("hM").addEventListener("change",updateHint);
+
+  function openDlg(id){
+    editingId = id||null;
+    const it = id ? items.find(x=>x.id===id) : null;
+    $("dlgTitle").textContent = it? "تعديل وثيقة" : "إضافة وثيقة";
+    $("delBtn").hidden = !it;
+    const known = it && TYPES.includes(it.type);
+    $("fType").value = it ? (known? it.type : "أخرى") : TYPES[0];
+    $("fCustom").value = it && !known ? it.type : "";
+    $("customRow").hidden = $("fType").value!=="أخرى";
+    $("fName").value = it?.name||""; $("fNum").value = it?.num||""; $("fNote").value = it?.note||"";
+    $("fDate").value = it?.date||""; $("hD").value=""; $("hY").value=""; $("hM").value="1";
+    setCal("g");
+    $("dlg").showModal(); $("fName").focus();
+  }
+  $("addBtn").onclick=()=>openDlg();
+  $("cancelBtn").onclick=()=>$("dlg").close();
+  $("delBtn").onclick=async()=>{
+    const it=items.find(x=>x.id===editingId);
+    if(it && confirm(`هل تريد حذف وثيقة «${it.name}»؟`)){ $("dlg").close(); await removeItem(editingId); }
+  };
+  $("form").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const iso=currentISO(), name=$("fName").value.trim();
+    if(!name){ $("fName").focus(); return; }
+    if(!iso){ const h=$("dateHint"); h.textContent="اختر تاريخ الانتهاء"; h.classList.add("err"); return; }
+    let type=$("fType").value; if(type==="أخرى" && $("fCustom").value.trim()) type=$("fCustom").value.trim();
+    const old = editingId && items.find(x=>x.id===editingId);
+    const it = { id: editingId||uid(), type, name, num:$("fNum").value.trim(), date:iso, note:$("fNote").value.trim(), created: old?.created||Date.now() };
+    $("dlg").close();
+    await saveItem(it);
+  });
+
+  // ---------- filters ----------
+  $("strip").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    filterStatus = filterStatus===b.dataset.f ? "" : b.dataset.f;
+    $("strip").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x.dataset.f===filterStatus));
+    render();
+  });
+  $("q").addEventListener("input",render);
+  $("typeFilter").addEventListener("change",render);
+
+  // ---------- Excel ----------
+  const HEAD = ["النوع","الاسم","الرقم","تاريخ الانتهاء (ميلادي)","تاريخ الانتهاء (هجري)","الأيام المتبقية","الحالة","ملاحظة"];
+  const ST_AR = {dead:"منتهي",soon:"خلال ٣٠ يوم",warn:"خلال ٩٠ يوم",ok:"سليم"};
+  function toHijriStr(iso){ const h=hijriOf(parseISO(iso)); return h.y+"/"+String(h.m).padStart(2,"0")+"/"+String(h.d).padStart(2,"0"); }
+  $("xlOut").onclick = async ()=>{
+    if(!window.XLSX){ setStatus("تعذّر تحميل مكتبة Excel"); return; }
+    const rows = items.map(x=>({...x,n:daysLeft(x.date)})).sort((a,b)=>a.n-b.n)
+      .map(x=>[x.type,x.name,x.num||"",x.date,toHijriStr(x.date),x.n,ST_AR[status(x.n)],x.note||""]);
+    const ws = XLSX.utils.aoa_to_sheet([HEAD,...rows]);
+    ws["!cols"]=[{wch:16},{wch:24},{wch:16},{wch:20},{wch:20},{wch:14},{wch:14},{wch:28}];
+    ws["!views"]=[{RTL:true}];
+    const wb = XLSX.utils.book_new(); wb.Workbook={Views:[{RTL:true}]};
+    XLSX.utils.book_append_sheet(wb, ws, "المتابعة");
+    const buf = XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    const name = "متابعة-الانتهاء-"+new Date().toISOString().slice(0,10)+".xlsx";
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if(dl){
+      try{ await dl.save({filename:name, data:buf}); setStatus("تم حفظ ملف Excel"); }
+      catch(e){ if(e && e.code!=="declined") setStatus("تعذّر حفظ الملف"); }
+    } else {
+      const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([buf])); a.download=name; a.click();
+    }
+  };
+  $("xlInLbl").addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); $("xlIn").click(); } });
+  $("xlIn").onchange = async e=>{
+    const f=e.target.files[0]; e.target.value=""; if(!f||!window.XLSX) return;
+    try{
+      const wb = XLSX.read(await f.arrayBuffer(),{cellDates:true});
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true});
+      let added=0;
+      for(const r of rows.slice(1)){
+        if(!r || !r[1]) continue;
+        let d=r[3], iso=null;
+        if(d instanceof Date) iso=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())).toISOString().slice(0,10);
+        else if(typeof d==="number"){ const p=XLSX.SSF.parse_date_code(d); iso=`${p.y}-${String(p.m).padStart(2,"0")}-${String(p.d).padStart(2,"0")}`; }
+        else if(typeof d==="string" && /^\d{4}-\d{1,2}-\d{1,2}$/.test(d.trim())){ const [y,m,dd]=d.trim().split("-"); iso=`${y}-${m.padStart(2,"0")}-${dd.padStart(2,"0")}`; }
+        if(!iso && r[4]){ const m=String(r[4]).match(/(\d{4})\D(\d{1,2})\D(\d{1,2})/); if(m) iso=hijriToISO(+m[1],+m[2],+m[3]); }
+        if(!iso) continue;
+        const dup = items.find(x=>x.name===String(r[1]).trim() && x.type===String(r[0]||"أخرى").trim() && x.date===iso);
+        if(dup) continue;
+        await saveItem({id:uid(),type:String(r[0]||"أخرى").trim(),name:String(r[1]).trim(),num:r[2]?String(r[2]):"",date:iso,note:r[7]?String(r[7]):"",created:Date.now()});
+        added++;
+      }
+      setStatus(added? `تم استيراد ${added} عنصر` : "ما لقيت صفوف جديدة في الملف");
+    }catch(err){ setStatus("تعذّر قراءة الملف — تأكد إنه بنفس ترتيب أعمدة الملف المحمّل"); }
+  };
+
+  // ---------- boot ----------
+  $("today").innerHTML = "التاريخ: " + fmtG.format(new Date(today0())) + "<br>" + fmtH.format(new Date(today0()));
+  items = lsLoad(); render();
+  setInterval(()=>{ render(); }, 60*60*1000);
+
+  if(window.claude && window.claude.use){
+    (async()=>{
+      const [ns, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      const myId = user ? await user.id() : null;
+      if(!ns || !myId){ setStatus("البيانات محفوظة على هذا الجهاز فقط"); return; }
+      db = ns;
+      col = db.collection("data/users/" + myId);   // private list for this person only
+      let first = true;
+      col.onSnapshot(async snap=>{
+        const remote = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        if(first){
+          first=false;
+          const ids=new Set(remote.map(x=>x.id));
+          // move items saved on this device
+          const localOnly = lsLoad().filter(x=>!ids.has(x.id));
+          for(const x of localOnly){ try{ await col.doc(x.id).set(x); remote.push(x); ids.add(x.id); }catch(e){} }
+          if(localOnly.length){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+          // move the owner's items from the old shared list into their private list
+          if(user.isOwner && user.isOwner()){
+            try{
+              const old = await db.collection("items").get();
+              for(const d of old.docs){
+                const x = {id:d.id, ...d.data()};
+                if(!ids.has(x.id)){ await col.doc(x.id).set(x); remote.push(x); }
+                await db.collection("items").doc(d.id).delete();
+              }
+            }catch(e){}
+          }
+        }
+        items = remote; render(); setStatus("بياناتك خاصة بحسابك ولا يطّلع عليها غيرك");
+      }, ()=>{ setStatus("تعذّر الاتصال — البيانات على هذا الجهاز"); col=null; });
+    })();
+  } else {
+    setStatus("البيانات محفوظة على هذا الجهاز فقط");
+  }
+})();
+</script>
+</body>
+</html>
